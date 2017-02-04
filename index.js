@@ -1,17 +1,18 @@
-var Ev = require('event-manifest/event')
 var xtend = require('xtend')
+var Ev = require('event-manifest/event')
+var Store = require('pull-store')
+var Push = require('./push')
 
-function Message (effects, reducers) {
-    var fns = xtend(effects, reducers)
-    var keys = Object.keys(fns)
-
-    var msgs = keys.reduce(function (acc, k) {
-        acc[k] = Ev(k)
-        return acc
-    }, {})
-
-    return msgs
+function Component (effects, model) {
+    var fns = xtend(effects, model.update)
+    var component = {
+        source: Push(Object.keys(fns)),
+        state: Store(function scan (state, ev) {
+            var fn = model.update[Ev.type(ev)]
+            return fn(state, Ev.data(ev))
+        }, model())
+    }
+    return component
 }
 
-module.exports = Message
-
+module.exports = Component

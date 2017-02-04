@@ -3,13 +3,21 @@ var Pushable = require('pull-pushable')
 
 function Push (keys) {
     var p = Pushable()
-    var push = keys.reduce(function (acc, k) {
-        acc[k] = function (arg) {
+
+    var push = {}
+
+    keys.forEach(function (k) {
+        push[k] = function (arg) {
             p.push(Ev(k, arg))
         }
-        return acc
-    }, {})
-    return push
+    })
+
+    function wrapper () {
+        return p.apply(null, arguments)
+    }
+    wrapper.push = push
+    wrapper.end = p.end.bind(p)
+    return wrapper
 }
 
 module.exports = Push
