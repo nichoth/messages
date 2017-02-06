@@ -17,6 +17,7 @@
   "dependencies": {
     "event-manifest": "^0.1.0",
     "pull-pushable": "^2.0.1",
+    "pull-scan": "^1.0.0",
     "pull-store": "0.0.1",
     "xtend": "^4.0.1"
   }

@@ -1,5 +1,4 @@
 var test = require('tape')
-// var Pushable = require('pull-pushable')
 var S = require('pull-stream')
 var Component = require('../')
 

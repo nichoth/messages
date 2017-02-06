@@ -3,7 +3,6 @@ var Pushable = require('pull-pushable')
 
 function Push (keys) {
     var p = Pushable()
-
     var push = {}
 
     keys.forEach(function (k) {
