@@ -3,11 +3,38 @@ var Scan = require('pull-scan')
 var pushable = require('pull-pushable')
 var S = require('pull-stream')
 
+var effects = {
+    foo: function (state, msg, ev) {
+        msg.bar(ev + '!!!')
+    }
+}
+
+function Model () {
+    return ''
+}
+Model.update = {
+    bar: function (state, ev) {
+        return state + ev
+    }
+}
+
+var model = Component(effects, Model)
+
+S(
+    model.msgs,
+    model.store,
+    S.log()
+)
+
+model.msgs.push.foo('hello')
+model.msgs.push.bar(' hi')
 
 
-function Messages (a, b) {
+
+
+function Messages (effects, update) {
     var p = pushable()
-    var keys = Object.keys(xtend(a, b))
+    var keys = Object.keys(xtend(effects, update))
     var push = keys.reduce(function (acc, k) {
         acc[k] = function (data) {
             p.push([k, data])
@@ -18,35 +45,14 @@ function Messages (a, b) {
     function wrapper () {
         return p.apply(null, arguments)
     }
-    wrapper.end = p.end.bind(p)
+    wrapper.end = p.end
     wrapper.push = push
     return wrapper
 }
 
-var effects = {
-    foo: function (state, msg, ev) {
-        msg.bar(ev + '!!!')
-    }
-}
-function model () {
-    return ''
-}
-model.update = {
-    bar: function (state, ev) {
-        return state + ev
-    }
-}
-var msgs = Messages(effects, model.update)
-var stream = Component(msgs, effects, model)
 
-S(
-    stream,
-    S.log()
-)
-
-stream.push.foo('hello')
-
-function Component (msgs, effects, model) {
+function Component (effects, model) {
+    var msgs = Messages(effects, model.update)
     var state = model()
     var scan = Scan(function (_state, ev) {
         return model.update[ev[0]](_state, ev[1])
@@ -61,13 +67,15 @@ function Component (msgs, effects, model) {
         }),
         S.filter(function (ev) {
             return (!effects[ev[0]])
-        }),
-        scan,
-        S.through(_state => state = _state)
+        })
     )
 
     stream.push = msgs.push
     stream.end = msgs.end
-    return stream
+
+    return {
+        msgs: stream,
+        store: S(scan, S.through(_state => state = _state))
+    }
 }
 
