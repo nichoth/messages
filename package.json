@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "event-manifest": "^0.1.0",
+    "pull-async": "^1.0.0",
+    "pull-cat": "^1.1.11",
     "pull-flat-merge": "^1.1.0",
     "pull-pushable": "^2.0.1",
     "pull-scan": "^1.0.0",
