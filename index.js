@@ -1,4 +1,5 @@
 var Scan = require('pull-scan')
+var flatMerge = require('pull-flat-merge')
 var S = require('pull-stream')
 var Ev = require('event-manifest/event')
 
@@ -33,6 +34,7 @@ function Component (effects, model) {
     return function () {
         return S(
             sink(),
+            flatMerge(),
             scan()
         )
     }
@@ -41,17 +43,26 @@ function Component (effects, model) {
 var view = S.values([
     Ev('foo', 'hello'),
     Ev('bar', 'world'),
+    Ev('asyncThing', null),
     Ev('bla', '!!!')
 ])
+
 var effects = {
     foo: (state, ev) => Ev('baz', ev),
-    bar: (state, ev) => Ev('bla', ev)
+    bar: (state, ev) => Ev('bla', ev),
+    asyncThing: function (state, ev) {
+        return S(
+            S.values([ Ev('bla', '111') ]),
+            S.asyncMap(function (ev, cb) {
+                process.nextTick(cb.bind(null, null, ev))
+            })
+        )
+    }
 }
+
 function model () { return '' }
 model.update = {
-    baz: function (state, ev) {
-        return state + ev
-    },
+    baz: (state, ev) => state + ev,
     bla: (state, ev) => state + ' ' + ev
 }
 
