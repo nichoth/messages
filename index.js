@@ -1,75 +1,73 @@
+var xtend = require('xtend')
 var Scan = require('pull-scan')
-var flatMerge = require('pull-flat-merge')
+var pushable = require('pull-pushable')
 var S = require('pull-stream')
-var Ev = require('event-manifest/event')
 
-// return a writable bus and a readable stream of state
-// i guess that's a duplex stream
-// => { sink: writable, source: readable }
 
-// S(view, component)
-// S(component, view)
-// i guess this is two duplux streams
 
-// S(view, component, view)
+function Messages (a, b) {
+    var p = pushable()
+    var keys = Object.keys(xtend(a, b))
+    var push = keys.reduce(function (acc, k) {
+        acc[k] = function (data) {
+            p.push([k, data])
+        }
+        return acc
+    }, {})
 
-function Component (effects, model) {
-    var state = model()
-
-    function scan () {
-        return Scan(function (state, ev) {
-            var type = Ev.type(ev)
-            return model.update[type](state, Ev.data(ev))
-        }, state)
+    function wrapper () {
+        return p.apply(null, arguments)
     }
-
-    function sink () {
-        return S.map(function (ev) {
-            var fn = effects[Ev.type(ev)]
-            if (!fn) return ev
-            return fn(state, Ev.data(ev))
-        })
-    }
-
-    return function () {
-        return S(
-            sink(),
-            flatMerge(),
-            scan()
-        )
-    }
+    wrapper.end = p.end.bind(p)
+    wrapper.push = push
+    return wrapper
 }
-
-var view = S.values([
-    Ev('foo', 'hello'),
-    Ev('bar', 'world'),
-    Ev('asyncThing', null),
-    Ev('bla', '!!!')
-])
 
 var effects = {
-    foo: (state, ev) => Ev('baz', ev),
-    bar: (state, ev) => Ev('bla', ev),
-    asyncThing: function (state, ev) {
-        return S(
-            S.values([ Ev('bla', '111') ]),
-            S.asyncMap(function (ev, cb) {
-                process.nextTick(cb.bind(null, null, ev))
-            })
-        )
+    foo: function (state, msg, ev) {
+        msg.bar(ev + '!!!')
     }
 }
-
-function model () { return '' }
-model.update = {
-    baz: (state, ev) => state + ev,
-    bla: (state, ev) => state + ' ' + ev
+function model () {
+    return ''
 }
-
-var component = Component(effects, model)
+model.update = {
+    bar: function (state, ev) {
+        return state + ev
+    }
+}
+var msgs = Messages(effects, model.update)
+var stream = Component(msgs, effects, model)
 
 S(
-    view,
-    component(),
+    stream,
     S.log()
 )
+
+stream.push.foo('hello')
+
+function Component (msgs, effects, model) {
+    var state = model()
+    var scan = Scan(function (_state, ev) {
+        return model.update[ev[0]](_state, ev[1])
+    }, state)
+
+    var stream = S(
+        msgs,
+        S.through(function (ev) {
+            var fn = effects[ev[0]]
+            if (!fn) return
+            fn(state, msgs.push, ev[1])
+        }),
+        S.filter(function (ev) {
+            return (!effects[ev[0]])
+        }),
+        scan,
+        S.through(_state => state = _state)
+    )
+
+    stream.push = msgs.push
+    stream.end = msgs.end
+    return stream
+}
+
