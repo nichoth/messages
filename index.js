@@ -1,9 +1,7 @@
 var xtend = require('xtend')
 var flatMerge = require('pull-flat-merge')
 var Scan = require('pull-scan')
-var pushable = require('pull-pushable')
 var S = require('pull-stream')
-
 
 function Messages (effects, update) {
     var keys = Object.keys(xtend(update, effects))
@@ -24,22 +22,6 @@ function Component (model) {
         return model.update[ev[0]](_state, ev[1])
     }, state)
 
-    // var m = many()
-
-    var p = pushable(function onEnd (err) {
-        console.log('end', err)
-        if (err) throw err
-        // m.cap()
-    })
-    // m.add(p)
-
-    var push = Object.keys(msgs).reduce(function (acc, k) {
-        acc[k] = function (data) {
-            return p.push(msgs[k](data))
-        }
-        return acc
-    }, {})
-
     var stream = S(
         flatMerge(),
         S.map(function (ev) {
@@ -56,7 +38,6 @@ function Component (model) {
         store
     )
     wrapper.msg = msgs
-    wrapper.push = push
     wrapper.store = store
     return wrapper
 }
