@@ -44,7 +44,8 @@ test('model', function (t) {
     S(
         p,
         // S.through(console.log.bind(console, 'ev')),
-        model,
+        model.effects(),
+        model.store,
         S.collect(function (err, res) {
             t.error(err)
             t.deepEqual(res, [
