@@ -45,9 +45,6 @@ S(
     S.log()
 )
 
-// S.values([ ['foo', 'hello'], ['bar', ' hi'] ])
-
-
 function Messages (effects, update) {
     var keys = Object.keys(xtend(update, effects))
     var msgs = keys.reduce(function (acc, k) {
@@ -69,7 +66,6 @@ function Component (model) {
 
     var m = many()
 
-    // stream of streams
     var p = pushable(function onEnd (err) {
         console.log('end', err)
         if (err) throw err
@@ -86,23 +82,13 @@ function Component (model) {
 
     var stream = S(
         p,
-        flatMerge(),  // all msgs are streams, so merge them here
+        flatMerge(),
         S.map(function (ev) {
             var fn = effects[ev[0]]
             if (!fn) return ev
             return fn(state, msgs, ev[1])
         }),
         flatMerge()
-
-        // S.through(function (ev) {
-        //     var fn = effects[ev[0]]
-        //     if (!fn) return
-        //     fn(state, msgs, ev[1])
-        // }),
-        // S.filter(function (ev) {
-        //     console.log('here', ev)
-        //     return !(effects[ev[0]])
-        // })
     )
     stream.push = push
     stream.end = p.end
