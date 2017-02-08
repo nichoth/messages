@@ -44,3 +44,4 @@ p.push(model.msg.bar(' hi'))
 p.push(model.msg.asyncThing())
 p.end()
 
+module.exports = Model
