@@ -1,41 +1,59 @@
 var test = require('tape')
+var async = require('pull-async')
+var cat = require('pull-cat')
 var S = require('pull-stream')
 var Component = require('../')
+var pushable = require('pull-pushable')
 
-test('component thing', function (t) {
-    function model () {
-        return 'hello'
+function Model () {
+    return ''
+}
+Model.update = {
+    bar: function (state, ev) {
+        return state + ev
+    },
+    start: (state, ev) => state + ' resolving',
+    resolve: (state, ev) => state.replace(' resolving', '')
+}
+Model.effects = {
+    foo: function (state, msg, ev) {
+        return msg.bar(ev + '!!!')
+    },
+    asyncThing: function (state, msg, ev) {
+        return cat([
+            S.once(msg.start()),
+            async(function (cb) {
+                setTimeout(function () {
+                    cb(null, msg.resolve())
+                }, 100)
+            })
+        ])
     }
-    model.update = {
-        bar: function (state, ev) {
-            return ev
-        }
-    }
+}
 
-    var ctrl = {
-        foo: function (arg) {
-            return ['bar', arg]
-        }
-    }
 
+test('model', function (t) {
     t.plan(2)
-    var c = Component(ctrl, model)
+    var model = Component(Model)
+    var p = pushable()
+    p.push(model.msg.foo('hello'))
+    p.push(model.msg.bar(' hi'))
+    p.push(model.msg.asyncThing())
+    p.end()
+
     S(
-        c.source,
-        S.map(function (ev) {
-            var fn = ctrl[ev[0]]
-            if (fn) return fn(ev[1])
-            return ev
-        }),
-        c.state(),
+        p,
+        // S.through(console.log.bind(console, 'ev')),
+        model,
         S.collect(function (err, res) {
-            console.log(res)
             t.error(err)
-            t.deepEqual(res, [ 'hello', 'world' ])
+            t.deepEqual(res, [
+                'hello!!!',
+                'hello!!! hi',
+                'hello!!! hi resolving',
+                'hello!!! hi'
+            ], 'should do the thing')
         })
     )
-
-    c.source.push.foo('world')
-    c.source.end()
 })
 

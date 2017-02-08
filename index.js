@@ -1,52 +1,9 @@
 var xtend = require('xtend')
-var cat = require('pull-cat')
-var async = require('pull-async')
-// var many = require('pull-many')
 var flatMerge = require('pull-flat-merge')
 var Scan = require('pull-scan')
 var pushable = require('pull-pushable')
 var S = require('pull-stream')
 
-function Model () {
-    return ''
-}
-Model.update = {
-    bar: function (state, ev) {
-        return state + ev
-    },
-    start: (state, ev) => state + ' resolving',
-    resolve: (state, ev) => state.replace('resolving', '')
-}
-Model.effects = {
-    foo: function (state, msg, ev) {
-        return msg.bar(ev + '!!!')
-    },
-    asyncThing: function (state, msg, ev) {
-        return cat([
-            S.once(msg.start()),
-            async(function (cb) {
-                setTimeout(function () {
-                    cb(null, msg.resolve())
-                }, 1000)
-            })
-        ])
-    }
-}
-
-var p = pushable()
-
-var model = Component(Model)
-p.push(model.msg.foo('hello'))
-p.push(model.msg.bar(' hi'))
-p.push(model.msg.asyncThing())
-p.end()
-
-S(
-    p,
-    // S.through(console.log.bind(console, 'ev')),
-    model,
-    S.log()
-)
 
 function Messages (effects, update) {
     var keys = Object.keys(xtend(update, effects))
@@ -104,3 +61,4 @@ function Component (model) {
     return wrapper
 }
 
+module.exports = Component
