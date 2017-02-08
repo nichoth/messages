@@ -1,7 +1,7 @@
 var xtend = require('xtend')
 var cat = require('pull-cat')
 var async = require('pull-async')
-var many = require('pull-many')
+// var many = require('pull-many')
 var flatMerge = require('pull-flat-merge')
 var Scan = require('pull-scan')
 var pushable = require('pull-pushable')
@@ -33,15 +33,18 @@ Model.effects = {
     }
 }
 
+var p = pushable()
+
 var model = Component(Model)
-model.msg.push.foo('hello')
-model.msg.push.bar(' hi')
-model.msg.push.asyncThing()
+p.push(model.msg.foo('hello'))
+p.push(model.msg.bar(' hi'))
+p.push(model.msg.asyncThing())
+p.end()
 
 S(
-    model.msg,
+    p,
     // S.through(console.log.bind(console, 'ev')),
-    model.store,
+    model,
     S.log()
 )
 
@@ -64,12 +67,12 @@ function Component (model) {
         return model.update[ev[0]](_state, ev[1])
     }, state)
 
-    var m = many()
+    // var m = many()
 
     var p = pushable(function onEnd (err) {
         console.log('end', err)
         if (err) throw err
-        m.cap()
+        // m.cap()
     })
     // m.add(p)
 
@@ -81,7 +84,6 @@ function Component (model) {
     }, {})
 
     var stream = S(
-        p,
         flatMerge(),
         S.map(function (ev) {
             var fn = effects[ev[0]]
@@ -90,12 +92,15 @@ function Component (model) {
         }),
         flatMerge()
     )
-    stream.push = push
-    stream.end = p.end
 
-    return {
-        msg: stream,
-        store: S(scan, S.through(_state => state = _state))
-    }
+    var store = S(scan, S.through(_state => state = _state))
+    var wrapper = S(
+        stream,
+        store
+    )
+    wrapper.msg = msgs
+    wrapper.push = push
+    wrapper.store = store
+    return wrapper
 }
 
