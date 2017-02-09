@@ -1,13 +1,14 @@
 var S = require('pull-stream')
 var async = require('pull-async')
-var pushable = require('pull-pushable')
+// var pushable = require('pull-pushable')
 var cat = require('pull-cat')
-var Component = require('../')
+// var Component = require('../model')
 
-function Model () {
+function StringModel () {
     return ''
 }
-Model.update = {
+
+StringModel.update = {
     bar: function (state, ev) {
         return state + ev
     },
@@ -15,7 +16,7 @@ Model.update = {
     resolve: (state, ev) => state.replace(' resolving', '')
 }
 
-Model.effects = {
+StringModel.effects = {
     foo: function (state, msg, ev) {
         return msg.bar(ev + '!!!')
     },
@@ -31,17 +32,5 @@ Model.effects = {
     }
 }
 
-var model = Component(Model)
-var p = pushable()
-S(
-    S(p, model.effects()),
-    model.store,
-    S.log()
-)
+module.exports = StringModel
 
-p.push(model.msg.foo('hello'))
-p.push(model.msg.bar(' hi'))
-p.push(model.msg.asyncThing())
-p.end()
-
-module.exports = Model

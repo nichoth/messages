@@ -1,8 +1,8 @@
-var Model = require('../example')
+var Model = require('./example')
 var S = require('pull-stream')
 var pushable = require('pull-pushable')
 var mxtend = require('xtend/mutable')
-var Component = require('../')
+var Component = require('./')
 var noop = function () {}
 var h = noop
 
